@@ -17,10 +17,10 @@ clock = pygame.time.Clock()
 all_sprites_list = pygame.sprite.Group()
 
 # Create an instance of Ball and add it to the sprite group
-ball = Ball((255, 0, 0), 25, 10, [2,3])
+ball = Ball((255, 0, 0), 10)
 ball.rect.x = 100
 ball.rect.y = 100
-ball2 = Ball((0, 255, 0), 25, 5, [1,4])
+ball2 = Ball((0, 255, 0), 5, [1,4])
 ball2.rect.x = 200
 ball2.rect.y = 200
 all_sprites_list.add(ball)
@@ -33,6 +33,8 @@ def resolve_collision(ball1, ball2):
     
     # Calculate distance between balls
     distance = math.sqrt(dx**2 + dy**2)
+    if distance == 0:
+        return  # Prevent division by zero
     
     # Normalize the difference
     dx /= distance
@@ -59,6 +61,10 @@ while running:
         for ball2 in all_sprites_list:
             if ball1 != ball2 and pygame.sprite.collide_circle(ball1, ball2):
                 resolve_collision(ball1, ball2)
+                if ball1.value_update(ball2):
+                    ball1.kill()
+                if ball2.value_update(ball1):
+                    ball2.kill()
         ball1.update()
 
     # Update all sprites
