@@ -59,6 +59,14 @@ def resolve_collision(ball1, ball2):
     ball2.velocity[0] += -v2n * dx + v1n * dx
     ball2.velocity[1] += -v2n * dy + v1n * dy
 
+    # Move balls out of overlap
+    if distance < (ball1.radius + ball2.radius):
+        overlap = 0.5 * (distance - (ball1.radius + ball2.radius))
+        ball1.rect.x -= overlap * dx
+        #ball1.rect.y -= overlap * dy
+        ball2.rect.x += overlap * dx
+        #ball2.rect.y += overlap * dy
+
     if ball1.team != ball2.team:
         temp = ball1.value
         ball1.value -= ball2.value
@@ -97,7 +105,7 @@ while running:
     pygame.display.flip()
 
     # Cap the frame rate
-    clock.tick(30)
+    clock.tick(60)
 
 # Quit Pygame
 pygame.quit()
