@@ -1,14 +1,14 @@
 import pygame
 
 class Ball(pygame.sprite.Sprite):
-    def __init__(self, color, value, init_velo=[0, 0]):
+    def __init__(self, color, value, team, init_velo=[0, 0]):
         super().__init__()
         self.radius = 25 + int(value * 0.7)
         self.color = color
         self.velocity = init_velo
         self.value = value
+        self.team = team
 
-        self.radius = None
         self.image = None
         self.rect = None
 
@@ -39,8 +39,7 @@ class Ball(pygame.sprite.Sprite):
                 self.velocity[1] = 0  # Stop the ball
 
 
-    def value_update(self, other):
-        self.value -= other.value
+    def value_update(self):
         if self.value <= 0:
             return True
         else:
