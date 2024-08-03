@@ -15,14 +15,29 @@ class Ball(pygame.sprite.Sprite):
         # Draw the initial ball and text
         self.update_ball()
 
-    def update(self):
+    def update(self, dt = 0):
+        gravity_per_frame = 9.8 * dt  # dt is the time delta in seconds
+        self.velocity[1] += gravity_per_frame
         self.rect.x += self.velocity[0]
         self.rect.y += self.velocity[1]
 
         if self.rect.right >= 640 or self.rect.left <= 0:
-            self.velocity[0] = -self.velocity[0]
-        if self.rect.bottom >= 480 or self.rect.top <= 0:
-            self.velocity[1] = -self.velocity[1]
+            self.velocity[0] = -self.velocity[0] * 0.8
+        # Vertical boundary collision
+        if self.rect.bottom >= 480:
+            self.rect.bottom = 480
+            #print(self.color, abs(self.velocity[1]))
+            if abs(self.velocity[1]) > 2.5:
+                self.velocity[1] = -self.velocity[1] * 0.65  # Reverse and dampen the vertical velocity
+            else:
+                self.velocity[1] = 0  # Stop the ball
+        elif self.rect.top <= 0:
+            self.rect.top = 0
+            if abs(self.velocity[1]) > 2.5:
+                self.velocity[1] = -self.velocity[1] * 0.65
+            else:
+                self.velocity[1] = 0  # Stop the ball
+
 
     def value_update(self, other):
         self.value -= other.value

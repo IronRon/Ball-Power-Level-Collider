@@ -1,5 +1,6 @@
 import math
 import pygame
+import time
 import sys
 from ball import Ball  # Import the Ball class
 
@@ -9,8 +10,6 @@ pygame.init()
 # Set up the screen
 width, height = 640, 480
 screen = pygame.display.set_mode((width, height))
-
-# Set up the clock
 clock = pygame.time.Clock()
 
 # Create a group for all sprites
@@ -52,7 +51,12 @@ def resolve_collision(ball1, ball2):
 
 # Main game loop
 running = True
+last_time = time.time()
 while running:
+    current_time = time.time()
+    dt = current_time - last_time
+    last_time = current_time
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -65,10 +69,10 @@ while running:
                     ball1.kill()
                 if ball2.value_update(ball1):
                     ball2.kill()
-        ball1.update()
+        ball1.update(dt)
 
     # Update all sprites
-    all_sprites_list.update()
+    all_sprites_list.update(dt)
 
     # Draw everything
     screen.fill((0, 0, 0))
@@ -78,7 +82,7 @@ while running:
     pygame.display.flip()
 
     # Cap the frame rate
-    clock.tick(60)
+    clock.tick(30)
 
 # Quit Pygame
 pygame.quit()
