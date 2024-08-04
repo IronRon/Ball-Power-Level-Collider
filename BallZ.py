@@ -3,6 +3,7 @@ import pygame
 import time
 import sys
 from ball import Ball
+from obstacle import Obstacle
 
 pygame.init()
 
@@ -72,6 +73,23 @@ def resolve_collision(ball1, ball2):
         ball1.value -= ball2.value
         ball2.value -= temp
 
+
+def handle_obstacle_collision(ball, obstacle):
+    # Simple reflection logic: reverse velocity
+    ball.velocity[0] = -ball.velocity[0]
+    ball.velocity[1] = -ball.velocity[1]
+
+    # Move the ball back a bit to prevent sticking to the obstacle
+    ball.rect.x += ball.velocity[0] * 0.1
+    ball.rect.y += ball.velocity[1] * 0.1
+
+points1 = [(400, 300), (500, 200), (600, 300), (550, 400), (450, 400)]
+points2 = [(150, 150), (200, 100), (250, 150), (225, 200), (175, 200)]
+polygon_sprite1 = Obstacle((0, 255, 0), points1)
+polygon_sprite2 = Obstacle((0, 0, 255), points2)
+obstacles = pygame.sprite.Group()
+obstacles.add(polygon_sprite1, polygon_sprite2)
+
 # Main game loop
 running = True
 last_time = time.time()
@@ -84,6 +102,13 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
+    for ball in all_sprites_list:
+        ball.update(dt)
+        # Check collision with obstacles
+        for obstacle in obstacles:
+            if pygame.sprite.collide_mask(ball, obstacle):
+                handle_obstacle_collision(ball, obstacle)
+    
     for ball1 in all_sprites_list:
         for ball2 in all_sprites_list:
             if ball1 != ball2 and pygame.sprite.collide_circle(ball1, ball2):
@@ -100,6 +125,8 @@ while running:
     # Draw everything
     screen.fill((0, 0, 0))
     all_sprites_list.draw(screen)
+    obstacles.draw(screen)
+    #pygame.draw.polygon(screen, (255, 165, 0), points)
 
     # Update the display
     pygame.display.flip()

@@ -33,10 +33,8 @@ class Ball(pygame.sprite.Sprite):
                 self.velocity[1] = 0  # Stop the ball
         elif self.rect.top <= 0:
             self.rect.top = 0
-            if abs(self.velocity[1]) > 2.5:
-                self.velocity[1] = -self.velocity[1] * 0.65
-            else:
-                self.velocity[1] = 0  # Stop the ball
+            self.velocity[1] = -self.velocity[1] * 0.65
+ 
 
 
     def value_update(self):
