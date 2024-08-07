@@ -1,139 +1,100 @@
-import math
 import pygame
-import time
-import sys
-from ball import Ball
-from obstacle import Obstacle
+import pymunk
+import pymunk.pygame_util
+import math
+import random
 
 pygame.init()
 
-# Set up the screen
-width, height = 640, 480
-screen = pygame.display.set_mode((width, height))
-clock = pygame.time.Clock()
+WIDTH, HEIGHT = 1000, 1000
+window = pygame.display.set_mode((WIDTH, HEIGHT))
 
-# Create a group for all sprites
-all_sprites_list = pygame.sprite.Group()
+def create_boundaries(space, width, height):
+	rects = [
+		[(width/2, height - 10), (width, 20)],
+		[(width/2, 10), (width, 20)],
+		[(10, height/2), (20, height)],
+		[(width - 10, height/2), (20, height)]
+	]
 
-# Create an instance of Ball and add it to the sprite group
-ball = Ball((255, 0, 0), 10, 0)
-ball.rect.x = 100
-ball.rect.y = 100
-ball2 = Ball((0, 255, 0), 5, 1, [1,4])
-ball2.rect.x = 200
-ball2.rect.y = 200
-# Adding new balls
-ball3 = Ball((255, 0, 0), 8, 0, [2, -3])
-ball3.rect.x = 300
-ball3.rect.y = 100
-ball4 = Ball((0, 255, 0), 7, 1, [-2, 2])
-ball4.rect.x = 400
-ball4.rect.y = 300
-ball5 = Ball((255, 0, 0), 6, 0, [3, 1])
-ball5.rect.x = 500
-ball5.rect.y = 400
+	for pos, size in rects:
+		body = pymunk.Body(body_type=pymunk.Body.STATIC)
+		body.position = pos
+		shape = pymunk.Poly.create_box(body, size)
+		shape.elasticity = 0.4
+		shape.friction = 0.5
+		space.add(body, shape)
 
-# Add all balls to the sprite group
-all_sprites_list.add(ball, ball2, ball3, ball4, ball5)
+def create_ball(space, radius, mass, pos, power, color = (255, 0, 0, 100)):
+	body = pymunk.Body()
+	body.position = pos
+	shape = pymunk.Circle(body, radius)
+	shape.mass = mass
+	shape.elasticity = 0.9
+	shape.friction = 0.4
+	shape.color = color
+	shape.power = power
+	space.add(body, shape)
+	return shape
 
-def resolve_collision(ball1, ball2):
-    # Calculate the difference in positions
-    dx = ball1.rect.centerx - ball2.rect.centerx
-    dy = ball1.rect.centery - ball2.rect.centery
-    
-    # Calculate distance between balls
-    distance = math.sqrt(dx**2 + dy**2)
-    if distance == 0:
-        return  # Prevent division by zero
-    
-    # Normalize the difference
-    dx /= distance
-    dy /= distance
-    
-    # Calculate velocity components along the normal
-    v1n = dx * ball1.velocity[0] + dy * ball1.velocity[1]
-    v2n = dx * ball2.velocity[0] + dy * ball2.velocity[1]
-    
-    # Swap the velocity components
-    ball1.velocity[0] += -v1n * dx + v2n * dx
-    ball1.velocity[1] += -v1n * dy + v2n * dy
-    ball2.velocity[0] += -v2n * dx + v1n * dx
-    ball2.velocity[1] += -v2n * dy + v1n * dy
+def draw_text(window, text, position, font_size=20):
+    font = pygame.font.Font(None, font_size)
+    text_surface = font.render(str(text), True, (0, 0, 0))
+    text_rect = text_surface.get_rect(center=position)
+    window.blit(text_surface, text_rect)
 
-    # Move balls out of overlap
-    if distance < (ball1.radius + ball2.radius):
-        overlap = 0.5 * (distance - (ball1.radius + ball2.radius))
-        ball1.rect.x -= overlap * dx
-        #ball1.rect.y -= overlap * dy
-        ball2.rect.x += overlap * dx
-        #ball2.rect.y += overlap * dy
+def draw(space, window, draw_options, balls):
+	window.fill("white")
+	space.debug_draw(draw_options)
 
-    if ball1.team != ball2.team:
-        temp = ball1.value
-        ball1.value -= ball2.value
-        ball2.value -= temp
+	for ball in balls:
+		if hasattr(ball, 'power'):
+			pos = pymunk.pygame_util.to_pygame(ball.body.position, window)
+			draw_text(window, str(ball.power), pos, 20)    
 
+	pygame.display.update()
 
-def handle_obstacle_collision(ball, obstacle):
-    # Simple reflection logic: reverse velocity
-    ball.velocity[0] = -ball.velocity[0]
-    ball.velocity[1] = -ball.velocity[1]
+def create_team(space, width_start, width_end, height, balls, power_level, color):
+	while power_level > 0:
+		power = random.randint(1, power_level)
+		mass = power // 2 if power > 2 else power
+		ball = create_ball(space, power + 10, power, (random.randint(width_start, width_end), random.randint(20, height//2)), power, color)
+		balls.append(ball)
+		power_level -= power
 
-    # Move the ball back a bit to prevent sticking to the obstacle
-    ball.rect.x += ball.velocity[0] * 0.1
-    ball.rect.y += ball.velocity[1] * 0.1
+	
+def run(window, width, height):
+	run = True
+	clock = pygame.time.Clock()
+	fps = 60
+	dt = 1 / fps
 
-points1 = [(400, 300), (500, 200), (600, 300), (550, 400), (450, 400)]
-points2 = [(150, 150), (200, 100), (250, 150), (225, 200), (175, 200)]
-polygon_sprite1 = Obstacle((0, 255, 0), points1)
-polygon_sprite2 = Obstacle((0, 0, 255), points2)
-obstacles = pygame.sprite.Group()
-obstacles.add(polygon_sprite1, polygon_sprite2)
+	space = pymunk.Space()
+	space.gravity = (0, 981)
 
-# Main game loop
-running = True
-last_time = time.time()
-while running:
-    current_time = time.time()
-    dt = current_time - last_time
-    last_time = current_time
+	create_boundaries(space, width, height)
+	draw_options = pymunk.pygame_util.DrawOptions(window)
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+	balls = []
+	create_team(space, 20, width//2, height, balls, 70, (255, 0, 0, 100))
+	create_team(space, width//2, width-20, height, balls, 50, (0, 255, 0, 100))
 
-    for ball in all_sprites_list:
-        ball.update(dt)
-        # Check collision with obstacles
-        for obstacle in obstacles:
-            if pygame.sprite.collide_mask(ball, obstacle):
-                handle_obstacle_collision(ball, obstacle)
-    
-    for ball1 in all_sprites_list:
-        for ball2 in all_sprites_list:
-            if ball1 != ball2 and pygame.sprite.collide_circle(ball1, ball2):
-                resolve_collision(ball1, ball2)
-                if ball1.value_update():
-                    ball1.kill()
-                if ball2.value_update():
-                    ball2.kill()
-        ball1.update(dt)
+	while run:
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				run = False
+				break
 
-    # Update all sprites
-    all_sprites_list.update(dt)
+			if event.type == pygame.MOUSEBUTTONDOWN:
+				x, y = pygame.mouse.get_pos()
+				ball = create_ball(space, 30, 10, [x, y], 100)
+				balls.append(ball)
 
-    # Draw everything
-    screen.fill((0, 0, 0))
-    all_sprites_list.draw(screen)
-    obstacles.draw(screen)
-    #pygame.draw.polygon(screen, (255, 165, 0), points)
+		draw(space, window, draw_options, balls)
+		space.step(dt)
+		clock.tick(fps)
 
-    # Update the display
-    pygame.display.flip()
+	pygame.quit()
 
-    # Cap the frame rate
-    clock.tick(60)
-
-# Quit Pygame
-pygame.quit()
-sys.exit()
+if __name__ == "__main__":
+	run(window, WIDTH, HEIGHT)
