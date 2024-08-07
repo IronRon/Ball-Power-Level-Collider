@@ -25,7 +25,7 @@ def create_boundaries(space, width, height):
 		shape.friction = 0.5
 		space.add(body, shape)
 
-def create_ball(space, radius, mass, pos, power, color = (255, 0, 0, 100)):
+def create_ball(space, radius, mass, pos, power, team_id,  color = (255, 0, 0, 100)):
 	body = pymunk.Body()
 	body.position = pos
 	shape = pymunk.Circle(body, radius)
@@ -34,6 +34,7 @@ def create_ball(space, radius, mass, pos, power, color = (255, 0, 0, 100)):
 	shape.friction = 0.4
 	shape.color = color
 	shape.power = power
+	shape.team_id = team_id
 	space.add(body, shape)
 	return shape
 
@@ -54,14 +55,48 @@ def draw(space, window, draw_options, balls):
 
 	pygame.display.update()
 
-def create_team(space, width_start, width_end, height, balls, power_level, color):
+def create_team(space, width_start, width_end, height, balls, power_level, color, team_id):
 	while power_level > 0:
 		power = random.randint(1, power_level)
 		mass = power // 2 if power > 2 else power
-		ball = create_ball(space, power + 10, power, (random.randint(width_start, width_end), random.randint(20, height//2)), power, color)
+		ball = create_ball(space, power + 10, power, (random.randint(width_start, width_end), random.randint(20, height//2)), power, team_id, color)
 		balls.append(ball)
 		power_level -= power
 
+def update_ball_properties(shape, space):
+    new_mass = shape.power // 2 if shape.power > 2 else shape.power
+    new_radius = shape.power + 10
+    
+    # Update the shape's body mass and moment of inertia
+    shape.body.mass = new_mass
+    shape.body.moment = pymunk.moment_for_circle(new_mass, 0, new_radius, (0, 0))
+
+    shape.unsafe_set_radius(new_radius)
+
+def collision_handler(arbiter, space, data):
+	shape_a, shape_b = arbiter.shapes
+	if hasattr(shape_a, 'team_id') and hasattr(shape_b, 'team_id'):
+		if shape_a.team_id != shape_b.team_id:
+			# Calculate the minimum power between the two shapes
+			min_power = min(shape_a.power, shape_b.power)
+			# Subtract the minimum power from both shapes' power
+			shape_a.power -= min_power
+			shape_b.power -= min_power
+
+			# Check if either shape's power is now zero or less; if so, remove it
+			if shape_a.power <= 0:
+				space.remove(shape_a, shape_a.body)  # Remove both shape and body
+				data['balls'].remove(shape_a)
+			else:
+				update_ball_properties(shape_a, space)
+
+			if shape_b.power <= 0:
+				space.remove(shape_b, shape_b.body)
+				data['balls'].remove(shape_b)
+			else:
+				update_ball_properties(shape_b, space)
+	
+	return True
 	
 def run(window, width, height):
 	run = True
@@ -76,8 +111,13 @@ def run(window, width, height):
 	draw_options = pymunk.pygame_util.DrawOptions(window)
 
 	balls = []
-	create_team(space, 20, width//2, height, balls, 70, (255, 0, 0, 100))
-	create_team(space, width//2, width-20, height, balls, 50, (0, 255, 0, 100))
+	create_team(space, 20, width//2, height, balls, 70, (255, 0, 0, 100), 1)
+	create_team(space, width//2, width-20, height, balls, 50, (0, 255, 0, 100), 2)
+
+	# setting up the collision handler
+	handler = space.add_collision_handler(0, 0)
+	handler.begin = collision_handler
+	handler.data['balls'] = balls  # Pass the list of balls into the handler
 
 	while run:
 		for event in pygame.event.get():
@@ -85,10 +125,10 @@ def run(window, width, height):
 				run = False
 				break
 
-			if event.type == pygame.MOUSEBUTTONDOWN:
-				x, y = pygame.mouse.get_pos()
-				ball = create_ball(space, 30, 10, [x, y], 100)
-				balls.append(ball)
+			# if event.type == pygame.MOUSEBUTTONDOWN:
+			# 	x, y = pygame.mouse.get_pos()
+			# 	ball = create_ball(space, 30, 10, [x, y], 100)
+			# 	balls.append(ball)
 
 		draw(space, window, draw_options, balls)
 		space.step(dt)
