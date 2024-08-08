@@ -4,9 +4,11 @@ import pymunk.pygame_util
 import math
 import random
 
+from Camera import Camera
+from Constants import WIDTH, HEIGHT, GAME_WIDTH, GAME_HEIGHT
+
 pygame.init()
 
-WIDTH, HEIGHT = 1000, 1000
 window = pygame.display.set_mode((WIDTH, HEIGHT))
 
 def create_boundaries(space, width, height):
@@ -44,16 +46,17 @@ def draw_text(window, text, position, font_size=20):
     text_rect = text_surface.get_rect(center=position)
     window.blit(text_surface, text_rect)
 
-def draw(space, window, draw_options, balls):
-	window.fill("white")
-	space.debug_draw(draw_options)
-
-	for ball in balls:
-		if hasattr(ball, 'power'):
-			pos = pymunk.pygame_util.to_pygame(ball.body.position, window)
-			draw_text(window, str(ball.power), pos, 20)    
-
-	pygame.display.update()
+def draw(space, window, draw_options, balls, camera):
+    window.fill("white")
+	# Transform the drawing options based on the camera's position
+    draw_options.transform = pymunk.Transform(tx=-camera.camera.x, ty=-camera.camera.y)
+    space.debug_draw(draw_options)
+    for ball in balls:
+        if camera.camera.colliderect(ball.body.position.x - ball.radius, ball.body.position.y - ball.radius, ball.radius * 2, ball.radius * 2):
+            pos = pymunk.pygame_util.to_pygame(ball.body.position, window)
+            draw_text(window, str(ball.power), (pos[0] - camera.camera.x, pos[1] - camera.camera.y), 20)
+			
+    pygame.display.update()
 
 def create_team(space, width_start, width_end, height, balls, power_level, color, team_id):
 	while power_level > 0:
@@ -119,6 +122,8 @@ def run(window, width, height):
 	handler.begin = collision_handler
 	handler.data['balls'] = balls  # Pass the list of balls into the handler
 
+	camera = Camera(GAME_WIDTH, HEIGHT)
+
 	while run:
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
@@ -130,11 +135,19 @@ def run(window, width, height):
 			# 	ball = create_ball(space, 30, 10, [x, y], 100)
 			# 	balls.append(ball)
 
-		draw(space, window, draw_options, balls)
+		# Handle keyboard presses for camera control
+		if event.type == pygame.KEYDOWN:
+			if event.key == pygame.K_UP:  # Arrow up
+				camera.move_up(20)
+			elif event.key == pygame.K_DOWN:  # Arrow down
+				camera.move_down(20)
+				#print(camera.camera.y)
+
+		draw(space, window, draw_options, balls, camera)
 		space.step(dt)
 		clock.tick(fps)
 
 	pygame.quit()
 
 if __name__ == "__main__":
-	run(window, WIDTH, HEIGHT)
+	run(window, WIDTH, GAME_HEIGHT)
