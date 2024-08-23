@@ -51,10 +51,22 @@ def draw(space, window, draw_options, balls, multipliers, camera):
 	# Transform the drawing options based on the camera's position
     draw_options.transform = pymunk.Transform(tx=-camera.camera.x, ty=-camera.camera.y)
     space.debug_draw(draw_options)
+    num_of_balls = len(balls)
+    stationaryballs = 0
     for ball in balls:
+        # if (ball.body.position.x < 0 or
+		# 	ball.body.position.x > 480 or
+		# 	ball.body.position.y < 0 or
+		# 	ball.body.position.y > 4000 ):
+        #     space.remove(ball, ball.body)
+        if ball.body.velocity.y == 0:
+            stationaryballs += 1
         if camera.camera.colliderect(ball.body.position.x - ball.radius, ball.body.position.y - ball.radius, ball.radius * 2, ball.radius * 2):
             pos = pymunk.pygame_util.to_pygame(ball.body.position, window)
             draw_text(window, str(ball.power), (pos[0] - camera.camera.x, pos[1] - camera.camera.y), 20)
+
+    if stationaryballs == num_of_balls:
+        print("gameover")
 		
     for multiplier in multipliers:
         if camera.camera.colliderect(multiplier.body.position.x - multiplier.radius, multiplier.body.position.y - multiplier.radius, multiplier.radius * 2, multiplier.radius * 2):
@@ -179,13 +191,16 @@ def run(window, width, height):
 	create_boundaries(space, width, height)
 	draw_options = pymunk.pygame_util.DrawOptions(window)
 
-    # Obstacle Course
-	create_obstacle(space, (240, 1500), (200, 20))  # Middle platform
+
+	#create_obstacle(space, (240, 1500), (200, 20))  # Middle platform
 	#create_circular_obstacle(space, (100, 1400), 30)  # Small circular obstacle
 	create_circular_obstacle(space, (380, 1350), 20)  # Large circular obstacle
 	create_slope(space, [(0, 20), (20, 0), (20, 80)], (140, 1200))  # Slope
+	create_slope(space, [(0, 20), (-20, 0), (-20, 80)], (40, 1200))  # Slope
 
-    # Final Challenge
+	create_slope(space, [(0, 20), (20, 0), (20, 80)], (170, 950))  # Slope
+	create_slope(space, [(0, 20), (-20, 0), (-20, 80)], (70, 950))  # Slope
+
 	create_obstacle(space, (240, 800), (250, 5))  # Upper platform
 	create_slope(space, [(0, 0), (10, 0), (20, 30), (30, 30)], (100, 600))  # Steep slope
 	create_slope(space, [(0, 0), (-10, 0), (-20, 30), (-30, 30)], (140, 600))  # Inverse steep slope
@@ -193,10 +208,13 @@ def run(window, width, height):
 	multipliers = []
 	#multiplier(space, (100, 1400), 30, 3)
 	multipliers.append(multiplier(space, (width // 2, 1250), 10, 3))
+	multipliers.append(multiplier(space, (30, 950), 10, 3))
+	multipliers.append(multiplier(space, (160, 1250), 10, 3))
 
 	balls = []
 	create_team(space, 20, width//2, height, balls, 70, (255, 0, 0, 100), 1)
 	create_team(space, width//2, width-20, height, balls, 50, (0, 255, 0, 100), 2)
+	#num_of_balls = len(balls)
 
 	# setting up the collision handler
 	handler = space.add_collision_handler(0, 0)
